@@ -3,6 +3,4 @@
 **/__pycache__/
 *.py[cod]
 *$py.class
-*.db
-*.db-shm
-*.db-wal
+astral.ini

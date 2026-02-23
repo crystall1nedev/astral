@@ -1,20 +1,17 @@
 import discord
-import requests
-import dotenv
-import os
 import cpuinfo
 import secrets
 from uwuipy import uwuipy
-from requests.exceptions import HTTPError
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 from discord import Option
+from support.storage import astralStorage
 
 #load basic bot info from disk
-dotenv.load_dotenv()
+storage = astralStorage
 botVersion = "1.0.5"
 botVersionDate = "September 25 2023"
-botName = str(os.getenv("botName"))
+botName = storage.getGlobalOption("name")
 
 class fun(commands.Cog):
     def __init__(self, bot):
@@ -40,7 +37,7 @@ class fun(commands.Cog):
         match ctx.author.id:
             # no Eva
             case 626397784169381888:
-                await ctx.respond("shut up eva i'm going to have you up against a wall soon enough just Wait")
+                await ctx.respond("<@281503786986635265> pin this cow to a wall")
                 await ctx.send(":3")
                 return
             
