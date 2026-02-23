@@ -8,10 +8,9 @@ from discord import Option
 from support.storage import astralStorage
 
 #load basic bot info from disk
-storage = astralStorage
 botVersion = "1.0.5"
 botVersionDate = "September 25 2023"
-botName = storage.getGlobalOption("name")
+botName = astralStorage.getGlobalOption("name")
 
 class fun(commands.Cog):
     def __init__(self, bot):

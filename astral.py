@@ -3,16 +3,14 @@ import discord
 import os
 from discord.ext import commands
 
-storage = astralStorage
-
-print(f"[bot    ] {storage.getGlobalOption("name")}")
+print(f"[bot    ] {astralStorage.getGlobalOption("name")}")
 
 # console markers
 success = '[√]'
 error = '[x]'
 
 #load token and owner from disk
-token = storage.getGlobalOption("token")
+token = astralStorage.getGlobalOption("token")
 
 # bot setup
 intents = discord.Intents.default()
@@ -21,7 +19,7 @@ intents.members = True
 bot = commands.Bot(intents=intents)
 
 #load cogs
-cogs = list(map(str.strip, storage.getGlobalOption("cogs").split(",")))
+cogs = list(map(str.strip, astralStorage.getGlobalOption("cogs").split(",")))
 if cogs is None:
     cogs = ['osuUtils', 'fun', 'lookupUtils']
 if "all" in cogs:
