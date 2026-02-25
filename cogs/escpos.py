@@ -45,7 +45,7 @@ class escpos(commands.Cog):
 
 
     def parse_paper_status(self, status):
-        print(f"[parse_paper_status] Received paper status: {status}")
+        print(f"[escpos ] [parse_paper_status] Received paper status: {status}")
         if status == 0:
             return "There is no paper"
         elif status == 1:
@@ -89,20 +89,20 @@ class escpos(commands.Cog):
         await ctx.defer()
         roles = astralStorage.getServerIntList(ctx.guild.id, "allowedroles", "escpos")
         if roles is None:
-            print(f"[print] Server {ctx.guild.id} has not configured escpos functionality")
+            print(f"[escpos ] [print] Server {ctx.guild.id} has not configured escpos functionality")
             await ctx.respond("This server doesn't currently have the required ESC/POS settings configured.")
         else: self.allowed_role_ids = roles
 
         member = ctx.guild.get_member(ctx.author.id)
         if not member or not any(role_id in [role.id for role in member.roles] for role_id in self.allowed_role_ids):
-            print(f"[print] User '{ctx.author.id}' does not have the required roles to use the print command")
+            print(f"[escpos ] [print] User '{ctx.author.id}' does not have the required roles to use the print command")
             await ctx.respond("You don't have the required role to use this command")
             raise commands.CheckFailure
         callerDisplayname = member.display_name
         callerUsername = member.name
 
         msg = await ctx.respond(f"Preparing to print your text")
-        print(f"[print] User '{callerDisplayname} ({callerUsername})' is printing message: {texttoprint}")
+        print(f"[escpos ] [print] User '{callerDisplayname} ({callerUsername})' is printing message: {texttoprint}")
         try:
             if len(texttoprint) > 200:
                 raise ValueError("The text to print is too long. Please limit it to 200 characters")
@@ -113,12 +113,12 @@ class escpos(commands.Cog):
             if printer.paper_status() == 0:
                 printer.close()
                 raise Exception("There is no paper in the printer")
-            print("[print] Opened printer")
+            print("[escpos ] [print] Opened printer")
             if self.verbosity_to_discord: await msg.edit("Connected, now printing your text... (2/2)")
             printer.text(f"Message from '{callerDisplayname} ({callerUsername})':\n{texttoprint}\n")
             printer.cut()
             printer.close()
-            print("[print] Closed printer")
+            print("[escpos ] [print] Closed printer")
         except Exception as e:
             print(repr(e))
             await msg.edit(f"An error occurred while trying to print: {repr(e)}")
@@ -133,14 +133,14 @@ class escpos(commands.Cog):
         await ctx.defer()
         roles = astralStorage.getServerIntList(ctx.guild.id, "allowedroles", "escpos")
         if roles is None:
-            print(f"[print] Server {ctx.guild.id} has not configured escpos functionality")
+            print(f"[escpos ] [print] Server {ctx.guild.id} has not configured escpos functionality")
             await ctx.respond("This server doesn't currently have the required ESC/POS settings configured.")
             raise commands.CheckFailure
         else: self.allowed_role_ids = roles
         
         member = ctx.guild.get_member(ctx.author.id)
         if not member or not any(role_id in [role.id for role in member.roles] for role_id in self.allowed_role_ids):
-            print(f"[image] User '{ctx.author.id}' does not have the required roles to use the print command")
+            print(f"[escpos ] [image] User '{ctx.author.id}' does not have the required roles to use the print command")
             await ctx.respond("You don't have the required role to use this command")
             raise commands.CheckFailure
         callerDisplayname = member.display_name
@@ -148,32 +148,32 @@ class escpos(commands.Cog):
         imagename = imagetoprint.filename
 
         msg = await ctx.respond(f"Preparing to print your image {imagename}")
-        print(f"[image] User '{callerDisplayname} ({callerUsername})' is printing an image {imagename}")
+        print(f"[escpos ] [image] User '{callerDisplayname} ({callerUsername})' is printing an image {imagename}")
 
         try:
             if not imagename.lower().endswith(self.supported_pil_image_types):
                 raise ValueError(f"The file {imagename} is not an image. Supported types are: {(', '.join(self.supported_pil_image_types))}")
-            print(f"[image] File is of type {(', '.join(self.supported_pil_image_types))}")
+            print(f"[escpos ] [image] File is of type {(', '.join(self.supported_pil_image_types))}")
             
             if self.verbosity_to_discord: await msg.edit("Downloading your image (1/4)")
-            print("[image] Downloading image")
+            print("[escpos ] [image] Downloading image")
             remote_file = requests.get(imagetoprint.url)
 
             image = Image.open(BytesIO(remote_file.content))
-            print("[image] Image opened")
+            print("[escpos ] [image] Image opened")
             # open image from file
 
             if self.verbosity_to_discord: await msg.edit("Applying processing to your image (2/4)")
             if not image.width < image.height:
-                print("[image] Image is wide, rotating to landscape")
+                print("[escpos ] [image] Image is wide, rotating to landscape")
                 image = image.rotate(270, expand=True)
             image = image.convert("L")
             #Acquire image, rotate and grayscale it
 
             brightness = self.calculate_brightness(image)
-            print(f"[image] Calculated brightness: {brightness}")
+            print(f"[escpos ] [image] Calculated brightness: {brightness}")
             brightness_enhancement = self.calculate_brightness_enhancement(brightness)
-            print(f"[image] Calculated brightness enhancement: {brightness_enhancement}")
+            print(f"[escpos ] [image] Calculated brightness enhancement: {brightness_enhancement}")
             brightnessfilter = ImageEnhance.Brightness(image)
             image = brightnessfilter.enhance(brightness_enhancement)
             # Calculate brightness to apply and apply it
@@ -185,18 +185,18 @@ class escpos(commands.Cog):
 
             image.thumbnail((512, 768), Image.Resampling.NEAREST)
             # Resize to be max 512 wide and 768 tall
-            print("[image] Adjusted, grayscaled and resized image")
+            print("[escpos ] [image] Adjusted, grayscaled and resized image")
 
             byteImage = BytesIO()
             image.save(byteImage, "JPEG")
             byteImage.seek(0)
             discordFile = discord.File(fp=byteImage, filename=imagename, description="Image uploaded for printing")
-            print("[image] Created discord file object from processed image")
+            print("[escpos ] [image] Created discord file object from processed image")
 
             if multitone:
                 if not self.enable_multitone:
                     raise Exception("Multitoning is disabled in the configuration")
-                print("[image] Processing multitone")
+                print("[escpos ] [image] Processing multitone")
                 contrastfilter = ImageEnhance.Contrast(image)
                 image = contrastfilter.enhance(0.7)
                 brightnessfilter = ImageEnhance.Brightness(image)
@@ -211,21 +211,21 @@ class escpos(commands.Cog):
             if printer.paper_status() == 0:
                 printer.close()
                 raise Exception("There is no paper in the printer")
-            print("[image] Opened printer")
+            print("[escpos ] [image] Opened printer")
             try:
                 if self.verbosity_to_discord: await msg.edit("Connected, now printing your image... (4/4)")
                 printer.text(f"Image from '{callerDisplayname} ({callerUsername})':\n")
                 if multitone:
-                    print("[image] Printing multitone")
+                    print("[escpos ] [image] Printing multitone")
                     printer._raw(tempBytes)
                     printer.set_with_default()
                 else:
-                    print("[image] Printing normal")
+                    print("[escpos ] [image] Printing normal")
                     printer.image(image, center=True, impl='graphics')
                 
                 printer.cut()
                 printer.close()
-                print("[image] Closed printer")
+                print("[escpos ] [image] Closed printer")
             except Exception as e:
                 printer.close()
                 raise e
@@ -258,7 +258,7 @@ class escpos(commands.Cog):
             if self.verbosity_to_discord: await msg.edit("Connecting to the printer... (1/1)")
             printer = Network(self.printer_ip, self.printer_port, profile=self.printer_profile)
             printer.open()
-            print("[paper_status] Opened printer")
+            print("[escpos ] [paper_status] Opened printer")
             paper_status = self.parse_paper_status(printer.paper_status())
             printer.close()
         except Exception as e:
