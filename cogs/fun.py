@@ -10,7 +10,7 @@ from support.storage import astralStorage
 #load basic bot info from disk
 botVersion = "1.0.5"
 botVersionDate = "September 25 2023"
-botName = astralStorage.getGlobalOption("name")
+botName = astralStorage.getGlobalStr("astral", "name")
 
 class fun(commands.Cog):
     def __init__(self, bot):
