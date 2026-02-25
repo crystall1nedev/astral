@@ -18,7 +18,7 @@ from support.storage import astralStorage
 class escpos(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.supported_pil_image_types = {ex for ex, f in Image.registered_extensions().items() if f in Image.OPEN}
+        self.supported_pil_image_types = tuple(ex for ex, f in Image.registered_extensions().items() if f in Image.OPEN)
 
         # Don't worry about the None here, it's set later when commands are run
         self.allowed_role_ids     = None 
