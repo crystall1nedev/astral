@@ -1,7 +1,9 @@
 import configparser, os
+import inspect
 from asyncio import sleep 
-from discord import Member
-class astralStorage(object):
+from discord import Member, ApplicationContext
+from support.error import astral_error, astral_exception
+class astral_storage(object):
     # Object intended to hold individual server configurations
     # Don't access this directly; use the helpers.
     serverConfigs = {}
@@ -35,7 +37,7 @@ class astralStorage(object):
     
     # Save configurations to disk, used by the autosave loop 
     # but can be called manually when necessary.
-    def saveConfigsToDisk(self):
+    def save_configs_to_disk(self):
         try:
             with open("astral.ini", "w") as configfile:
                 print("[storage] saving astral.ini")
@@ -51,26 +53,26 @@ class astralStorage(object):
             raise Exception(f"[storage] Saving failed: {e}\n[storage] All data is EPHEMERAL until this issue is fixed!!!")
 
     # Getter wrappers for easy outputs
-    def getServerInt(self, server, section, opt) -> int:
-        val = self.getServerOption(server, section, opt)
+    def get_server_int(self, server, section, opt) -> int:
+        val = self.get_server_option(server, section, opt)
         return int(val) if val is not None else None
-    def getServerFloat(self, server, section, opt) -> float:   
-        val = self.getServerOption(server, section, opt)
+    def get_server_float(self, server, section, opt) -> float:   
+        val = self.get_server_option(server, section, opt)
         return float(val) if val is not None else None
-    def getServerStr(self, server, section, opt) -> str:  
-        val = self.getServerOption(server, section, opt)
+    def get_server_str(self, server, section, opt) -> str:  
+        val = self.get_server_option(server, section, opt)
         return val if val is not None else None
-    def getServerBool(self, server, section, opt) -> bool:     
-        val = self.getServerOption(server, section, opt)
+    def get_server_bool(self, server, section, opt) -> bool:     
+        val = self.get_server_option(server, section, opt)
         return bool(val) if val is not None else None
-    def getServerStrList(self, server, section, opt) -> list:  
-        val = self.getServerOption(server, section, opt)
+    def get_server_str_list(self, server, section, opt) -> list:  
+        val = self.get_server_option(server, section, opt)
         return list(map(str.strip, val.split(","))) if val is not None else None
-    def getServerIntList(self, server, section, opt) -> list:  
-        val = self.getServerOption(server, section, opt)
+    def get_server_int_list(self, server, section, opt) -> list:  
+        val = self.get_server_option(server, section, opt)
         return list(map(int, val.split(","))) if val is not None else None
     # Gets a raw string value from server specific .ini
-    def getServerOption(self, server, section, opt):
+    def get_server_option(self, server, section, opt):
         print(f"[storage] returning server {server} section {section} option {opt}")
         if server not in self.serverConfigs.keys():
             print("[storage] very bad state:")
@@ -95,13 +97,13 @@ class astralStorage(object):
         return val.strip() if val else None
 	
     # Setter wrappers for easy inputs
-    def setServerInt(self, server, section, opt, val):   self.setServerOption(server, section, opt, (str(val)))
-    def setServerFloat(self, server, section, opt, val): self.setServerOption(server, section, opt, (str(val)))
-    def setServerStr(self, server, section, opt, val):   self.setServerOption(server, section, opt, (str(val)))
-    def setServerBool(self, server, section, opt, val):  self.setServerOption(server, section, opt, "true" if val else "false")
-    def setServerList(self, server, section, opt, val):  self.setServerOption(server, section, opt, (str(",".join(map(str, val)))))
+    def set_server_int(self, server, section, opt, val):   self.set_server_option(server, section, opt, (str(val)))
+    def set_server_float(self, server, section, opt, val): self.set_server_option(server, section, opt, (str(val)))
+    def set_server_str(self, server, section, opt, val):   self.set_server_option(server, section, opt, (str(val)))
+    def set_server_bool(self, server, section, opt, val):  self.set_server_option(server, section, opt, "true" if val else "false")
+    def set_server_list(self, server, section, opt, val):  self.set_server_option(server, section, opt, (str(",".join(map(str, val)))))
     # Sets a raw string value in server specific .ini
-    def setServerOption(self, server, section, opt, val):
+    def set_server_option(self, server, section, opt, val):
         print(f"[storage] setting server {server} section {section} option {opt} = {val}")
 
         # If it's not here, we need to make it
@@ -119,26 +121,26 @@ class astralStorage(object):
         cfg.set(section, opt, val)
 
     # Getter wrappers for easy outputs
-    def getGlobalInt(self, section, opt) -> int:     
-        val = self.getGlobalOption(section, opt)
+    def get_global_int(self, section, opt) -> int:     
+        val = self.get_global_option(section, opt)
         return int(val) if val is not None else None
-    def getGlobalFloat(self, section, opt) -> float: 
-        val = self.getGlobalOption(section, opt)
+    def get_global_float(self, section, opt) -> float: 
+        val = self.get_global_option(section, opt)
         return float(val) if val is not None else None
-    def getGlobalStr(self, section, opt) -> str:     
-        val = self.getGlobalOption(section, opt)
+    def get_global_str(self, section, opt) -> str:     
+        val = self.get_global_option(section, opt)
         return val if val is not None else None
-    def getGlobalBool(self, section, opt) -> bool:   
-        val = self.getGlobalOption(section, opt)
+    def get_global_bool(self, section, opt) -> bool:   
+        val = self.get_global_option(section, opt)
         return bool(val) if val is not None else None
-    def getGlobalStrList(self, section, opt) -> list:  
-        val = self.getGlobalOption(section, opt)
+    def get_global_str_list(self, section, opt) -> list:  
+        val = self.get_global_option(section, opt)
         return list(map(str.strip, val.split(","))) if val is not None else None
-    def getGlobalIntList(self, section, opt) -> list:   
-        val = self.getGlobalOption(section, opt)
+    def get_global_int_list(self, section, opt) -> list:   
+        val = self.get_global_option(section, opt)
         return list(map(int, val.split(","))) if val is not None else None
     # Gets a raw string value from astral.ini
-    def getGlobalOption(self, section, opt):
+    def get_global_option(self, section, opt):
         print(f"[storage] returning global section {section} option {opt}")
         cfg = self.globalConfig
 
@@ -153,23 +155,23 @@ class astralStorage(object):
         return val.strip() if val else None
 	
     # Setter wrappers for easy inputs
-    def setGlobalInt(self, section, opt, val):   self.setGlobalOption(section, opt, (str(val)))
-    def setGlobalFloat(self, section, opt, val): self.setGlobalOption(section, opt, (str(val)))
-    def setGlobalStr(self, section, opt, val):   self.setGlobalOption(section, opt, (str(val)))
-    def setGlobalBool(self, section, opt, val):  self.setGlobalOption(section, opt, "true" if val else "false")
-    def setGlobalList(self, section, opt, val):  self.setGlobalOption(section, opt, (str(",".join(map(str, val)))))
+    def set_global_int(self, section, opt, val):   self.set_global_option(section, opt, (str(val)))
+    def set_global_float(self, section, opt, val): self.set_global_option(section, opt, (str(val)))
+    def set_global_str(self, section, opt, val):   self.set_global_option(section, opt, (str(val)))
+    def set_global_bool(self, section, opt, val):  self.set_global_option(section, opt, "true" if val else "false")
+    def set_global_list(self, section, opt, val):  self.set_global_option(section, opt, (str(",".join(map(str, val)))))
     # Sets a raw string value in astral.ini
-    def setGlobalOption(self, section, opt, val):
+    def set_global_option(self, section, opt, val):
         print(f"[storage] setting {val} for global section {section} option {opt}")
         self.globalConfig.set(section, opt, val)
     
     # Checks whether or not the passed int is in the owners list.
-    def isCallerOwner(self, user: Member) -> bool:
+    def is_caller_owner(self, user: Member) -> bool:
         # Disable the ability to run all owner-only commands by default.
         # This is overriden manually by config.py's addOwner.
-        return self.isCallerEntitledFor(user, False, astralStorage.getGlobalIntList("astral", "owners"))
+        return self.is_caller_entitled_for(user, False, astral_storage.get_global_int_list("astral", "owners"))
     
-    def isCallerEntitledFor(self, user: Member, shouldCheckRoles: bool, array: list = None) -> bool:
+    def is_caller_entitled_for(self, user: Member, shouldCheckRoles: bool, array: list = None) -> bool:
         if array is None:   return False
         if len(array) == 0: return False
         if shouldCheckRoles:
@@ -177,8 +179,22 @@ class astralStorage(object):
         else:
             return user.id in array
 
+    def issue_with_configuration_present(self, env, error_array: list, ctx: ApplicationContext = None) -> astral_error:
+        errors = []
+        for err, var, getter, default in error_array:
+            match len(inspect.signature(getter).parameters):
+                case 0: value = getter()
+                case 1: value = getter(ctx)
+            setattr(env, var, value)
+            if value is None: 
+                if err.critical: 
+                    errors.append(err)
+                
+                print(f"[storage] [verify] {err.value}")
+                if default is not None:
+                    print(f"[storage] [verify] Falling back to default value")
+                    setattr(env, var, default)
+        
+        return errors if len(errors) > 0 else None
 
-
-    
-
-astralStorage = astralStorage()
+astral_storage = astral_storage()

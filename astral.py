@@ -2,16 +2,18 @@
 import discord
 import os
 from discord.ext import commands, tasks
-from support.storage import astralStorage
-
-print(f"[bot    ] {astralStorage.getGlobalStr("astral", "name")}")
+from support.storage import astral_storage
+from support.error import astral_error, astral_exception
+print(f"[bot    ] {astral_storage.get_global_str("astral", "name")}")
 
 # console markers
 success = '[√]'
 error = '[x]'
 
 #load token and owner from disk
-token = astralStorage.getGlobalStr("astral", "token")
+token = astral_storage.get_global_str("astral", "token")
+if token is None:
+    raise astral_exception(astral_error.bot.undef_token)
 
 # bot setup
 intents = discord.Intents.default()
@@ -33,7 +35,7 @@ bot = commands.Bot(
 )
 
 #load cogs
-cogs = astralStorage.getGlobalStrList("astral", "cogs")
+cogs = astral_storage.get_global_str_list("astral", "cogs")
 if cogs is None:
     cogs = ['osuUtils', 'fun', 'lookupUtils']
 if "all" in cogs:
@@ -45,12 +47,12 @@ for cog in cogs:
     print(f"[bot    ] loading cog {cog}")
     bot.load_extension(f'cogs.{cog}')
 
-@tasks.loop(seconds=astralStorage.getGlobalInt("astral", "saveInterval"))
+@tasks.loop(seconds=astral_storage.get_global_int("astral", "saveInterval"))
 async def autosave():
     print("[storage] saving all configs to disk")
     try:
-        astralStorage.saveConfigsToDisk()
-        print(f"[storage] saved. waiting another {astralStorage.getGlobalInt("astral", "saveInterval")} seconds before saving again.")
+        astral_storage.save_configs_to_disk()
+        print(f"[storage] saved. waiting another {astral_storage.get_global_int("astral", "saveInterval")} seconds before saving again.")
     except Exception as e:
         print(e)
 

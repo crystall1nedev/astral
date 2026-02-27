@@ -13,7 +13,8 @@ from PIL import Image
 from PIL import ImageEnhance
 
 from support.multitone import main as multitoneImage
-from support.storage import astralStorage
+from support.storage import astral_storage
+from support.error import astral_error, astral_exception
 
 class escpos(commands.Cog):
     def __init__(self, bot):
@@ -22,26 +23,69 @@ class escpos(commands.Cog):
 
         # Don't worry about the None here, it's set later when commands are run
         self.allowed_role_ids     = None 
-        self.verbosity_to_discord = astralStorage.getGlobalBool("escpos", "verbosity")
-        self.printer_ip           = astralStorage.getGlobalStr("escpos", "ip")
-        self.printer_port         = astralStorage.getGlobalInt("escpos", "port")
-        self.printer_profile      = astralStorage.getGlobalStr("escpos", "profile")
-        self.enable_multitone     = astralStorage.getGlobalBool("escpos", "multitone")
+        self.allowed_user_ids     = None 
+        self.verbosity_to_discord = None
+        self.printer_ip           = None
+        self.printer_port         = None
+        self.printer_profile      = None
+        self.enable_multitone     = None
 
-        if None in [
-            self.verbosity_to_discord, 
-            self.printer_ip, 
-            self.printer_profile, 
-            self.enable_multitone
-        ]:
-            print("[escpos ] Couldn't find a required configuration option, check your configuration file!")
-            return
+    # This cog supports changing settings without needing the bot to restart.
+    # In order to handle that, __init__ and each command checks back here to 
+    # ensure that the command is able to be run.
+    async def verify_configuration_valid(self, ctx = None) -> bool:
+        ESCPOS_CHECKS = [
+            (astral_error.escpos.undef_ip, "printer_ip", lambda: astral_storage.get_global_str("escpos", "ip"), None),         
+            (astral_error.escpos.undef_port, "printer_port",
+             lambda: astral_storage.get_global_int("escpos", "port"), 9100),
+            (astral_error.escpos.undef_profile, "printer_profile",
+             lambda: astral_storage.get_global_str("escpos", "profile"), None),
+            (astral_error.escpos.undef_verbosity, "verbosity_to_discord",
+             lambda: astral_storage.get_global_bool("escpos", "verbosity"), False),
+            (astral_error.escpos.undef_multitone, "enable_multitone",
+             lambda: astral_storage.get_global_bool("escpos", "multitone"), False),
+        ]
+
+        if ctx is not None:
+            ESCPOS_CHECKS += [
+                (astral_error.escpos.undef_server, "allowed_role_ids",
+                lambda ctx: astral_storage.get_server_int_list(ctx.guild.id, "allowedroles", "escpos"), None),
+                (astral_error.escpos.undef_server, "allowed_user_ids",
+                lambda ctx: astral_storage.get_server_int_list(ctx.guild.id, "allowedusers", "escpos"), None),
+            ]
+
+        errors_with_config = astral_storage.issue_with_configuration_present(
+            self,
+            ESCPOS_CHECKS,
+            ctx
+        )
+
+        # errors_with_config will always only contain critical errors
+        # so we can make a decent amount of assumptions here
+        if errors_with_config is not None:
+            print(f"[escpos ] [print] ESC/POS cog can't continue:")
+            for error in errors_with_config:
+                print(f"[escpos ] [print] - {error.value}")
+
+            if ctx is not None:
+                # server skill issue
+                if self.allowed_role_ids is None and self.allowed_user_ids is None and len(errors_with_config) == 2:
+                    await ctx.respond("ESC/POS isn't properly set up in this server, make sure roles have been added with /config escpos roles and try again.")
+                    return False
+                
+                elif astral_error.escpos.undef_server not in errors_with_config:
+                    content = "ESC/POS isn't properly set up right now"
+                    if self.verbosity_to_discord:
+                        content += ":\n"
+                        for error in errors_with_config:
+                            content += f"{error}: {error.value}\n"
+                        await ctx.respond(content=content)
+                        return False
+                    
+                    await ctx.respond("ESC/POS isn't properly set up right now, try again later.")
+                    return False
         
-        msg  =  "[escpos ] Read configuration, seems to be valid! The configuration is:\n"
-        msg += f"[escpos ] - Discord: Allowed roles are {self.allowed_role_ids} and verbosity to discord is {self.verbosity_to_discord} \n"
-        msg += f"[escpos ] - Networking: IP is {self.printer_ip} and port is {self.printer_port}\n"
-        msg += f"[escpos ] - Printer: Profile is {self.printer_profile} and multitoning is {self.enable_multitone}"
-        print(msg)
+        return True
 
 
     def parse_paper_status(self, status):
@@ -87,11 +131,9 @@ class escpos(commands.Cog):
     @option("texttoprint", description="The text you want to print (200 character limit)", required=True)
     async def print_message(self, ctx, texttoprint: str):
         await ctx.defer()
-        roles = astralStorage.getServerIntList(ctx.guild.id, "allowedroles", "escpos")
-        if roles is None:
-            print(f"[escpos ] [print] Server {ctx.guild.id} has not configured escpos functionality")
-            await ctx.respond("This server doesn't currently have the required ESC/POS settings configured.")
-        else: self.allowed_role_ids = roles
+        if not await self.verify_configuration_valid(ctx): return
+
+        print(self.allowed_role_ids)
 
         member = ctx.guild.get_member(ctx.author.id)
         if not member or not any(role_id in [role.id for role in member.roles] for role_id in self.allowed_role_ids):
@@ -131,12 +173,7 @@ class escpos(commands.Cog):
     @option("multitone", type=bool, description="Higher quality by using 8 shades of gray instead of 2", required=False)
     async def print_image(self, ctx: discord.ApplicationContext, imagetoprint: discord.Attachment, multitone: bool = False):
         await ctx.defer()
-        roles = astralStorage.getServerIntList(ctx.guild.id, "allowedroles", "escpos")
-        if roles is None:
-            print(f"[escpos ] [print] Server {ctx.guild.id} has not configured escpos functionality")
-            await ctx.respond("This server doesn't currently have the required ESC/POS settings configured.")
-            raise commands.CheckFailure
-        else: self.allowed_role_ids = roles
+        if not await self.verify_configuration_valid(ctx): return
         
         member = ctx.guild.get_member(ctx.author.id)
         if not member or not any(role_id in [role.id for role in member.roles] for role_id in self.allowed_role_ids):

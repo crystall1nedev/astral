@@ -5,12 +5,12 @@ from uwuipy import uwuipy
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
 from discord import Option
-from support.storage import astralStorage
+from support.storage import astral_storage
 
 #load basic bot info from disk
 botVersion = "1.0.5"
 botVersionDate = "September 25 2023"
-botName = astralStorage.getGlobalStr("astral", "name")
+botName = astral_storage.get_global_str("astral", "name")
 
 class fun(commands.Cog):
     def __init__(self, bot):
