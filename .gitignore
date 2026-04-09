@@ -6,3 +6,4 @@
 astral.ini
 storage/* 
 !storage/example.ini
+venv*

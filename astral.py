@@ -3,6 +3,7 @@ import discord
 import os
 from discord.ext import commands, tasks
 from support.storage import astral_storage
+from support.autosave import _start as start_autosave, _update as update_autosave
 from support.error import astral_error, astral_exception
 print(f"[bot    ] {astral_storage.get_global_str("astral", "name")}")
 
@@ -47,19 +48,10 @@ for cog in cogs:
     print(f"[bot    ] loading cog {cog}")
     bot.load_extension(f'cogs.{cog}')
 
-@tasks.loop(seconds=astral_storage.get_global_int("astral", "saveInterval"))
-async def autosave():
-    print("[storage] saving all configs to disk")
-    try:
-        astral_storage.save_configs_to_disk()
-        print(f"[storage] saved. waiting another {astral_storage.get_global_int("astral", "saveInterval")} seconds before saving again.")
-    except Exception as e:
-        print(e)
-
 @bot.event
 async def on_ready():
     print(f"[bot    ] {success} Bot sucessfully initialized as {bot.user}")
-    autosave.start()
+    start_autosave()
 
 @bot.event
 async def on_application_command_error(ctx: discord.ApplicationContext, error: discord.DiscordException):

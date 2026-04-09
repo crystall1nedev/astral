@@ -5,6 +5,7 @@ from discord import option
 from discord.commands import SlashCommandGroup, OptionChoice
 from discord.ext import commands
 from support.storage import astral_storage
+from support.autosave import _update as update_autosave
 
 class config(commands.Cog):
     def __init__(self, bot):
@@ -72,6 +73,22 @@ class config(commands.Cog):
                 print("[command] addOwner failed: {e}")
                 msg += f"\n{e}"
             await msg.edit(content=msg)
+
+    @globalGroup.command(name="saveinterval",description=f"Change the auto-save interval (owner-only)")
+    @option("seconds", type=int,description="The amount of time (in seconds) to automatically save all configurations to disk", required=True)
+    async def configureSaveInterval(self, ctx, secs):
+        try:
+            msg = await ctx.respond("Configuring auto-save interval...")
+            astral_storage.set_global_int("astral", "save_interval", secs)
+            update_autosave()
+            await msg.edit(content=f"Auto-save interval updated to {secs} seconds.")
+        except Exception as e:
+            content = "Something went wrong while running that command."
+            if astral_storage.get_global_bool("astral", "debug"):
+                print(f"[command] roletest failed: {e}")
+                content += f"\n{e}"
+            await msg.edit(content=content)
+
 
     @globalGroup.command(name="escpos",description=f"Configure ESC/POS settings (owner-only)")
     @option("ip",type=str,description="The IP address of the ESC/POS printer to connect to.",required=False)
